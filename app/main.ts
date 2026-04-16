@@ -32,7 +32,7 @@ switch (command) {
       // Extract content
       // ignore header(blob <size>\0)
       const realContent = decompressContent.toString().split("\0")[1];
-      console.log(realContent);
+      process.stdout.write(realContent);
     } catch (err) {
       console.error("Error reading and decompressing blob");
     }
