@@ -34,9 +34,6 @@ switch (command) {
       // ignore header(blob <size>\0)
       const realContent = decompressContent.toString().split("\0")[1];
       process.stdout.write(realContent);
-      // test log
-      //process.stdout.write(content) // according to git
-      // console.log(decompressContent);
     } catch (err) {
       console.error("Error reading and decompressing blob");
     }
@@ -44,40 +41,44 @@ switch (command) {
     break;
   
   case "hash-object":
-    // 3b18e512dba79e4c8300dd08aeb37f8e728b8dad
     // Read file content
     const fileContent = fs.readFileSync(args[2]); // buffer
-    // convert buffer to bytes/ array buffer
+    // convert buffer to bytes/array buffer
     const buf = Buffer.from(fileContent);
     const fileContentBuffer = [...buf];
     
-    const contentSize = Buffer.byteLength(fileContent); // get length of file content
+    // Get size of content
+    const contentSize = Buffer.byteLength(fileContent);
     
+    // Create header
     const header = `blob ${contentSize}\0`; // create header, prepend \0
     const headerBuffer = Array.from(header, char => char.charCodeAt(0)); // Convert header into bytes
     
+    // Join header and content
+    // Compress content
+    // Decompress content for hashing later
     const gitObjectDataBuffer = [...headerBuffer, ...fileContentBuffer]; //join header and fileContent
     const compressedContent = zlib.deflateSync(Buffer.from(gitObjectDataBuffer));
     const decompressedContent = zlib.inflateSync(compressedContent);
 
-    // create hash
+    // Create hash for decompressed content
     const hash = createHash('sha1')
       .update(decompressedContent) // input data to be hashed
       .digest('hex'); // calculates digest and outs in 'hex' format
     
     // Write hashed content to .git/objects
+    // Create paths to input compressed content later
     const hashedDirectoryName = hash.slice(0,2);
     const hashedFileName = hash.slice(2);
     const dirPath = `.git/objects/${hashedDirectoryName}`;
     const filePath = `${dirPath}/${hashedFileName}`;
     
+    // Create directories and files
+    // input compressed content
     fs.mkdirSync(`${dirPath}`, { recursive: true });
     fs.writeFileSync(filePath, compressedContent);
   
-    // process.stdout.write(fileContent);
-    // process.stdout.write(typeof(stringFileContent));
-    //process.stdout.write(fileContent);
-    // process.stdout.write(compressedContent);
+    // Log hash
     console.log(hash);
 
     break;
