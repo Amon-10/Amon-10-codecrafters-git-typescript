@@ -58,7 +58,7 @@ switch (command) {
     // Compress content
     // Decompress content for hashing later
     const gitObjectDataBuffer = [...headerBuffer, ...fileContentBuffer]; //join header and fileContent
-    const compressedContent = zlib.deflateSync(Buffer.from(gitObjectDataBuffer));
+    const compressedContent = zlib.deflateSync(Buffer.from(gitObjectDataBuffer)); // Convert gitObjectDataBuffer back to buffer and compress
     const decompressedContent = zlib.inflateSync(compressedContent);
 
     // Create hash for decompressed content
