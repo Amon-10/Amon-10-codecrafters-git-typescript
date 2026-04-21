@@ -49,11 +49,11 @@ switch (command) {
     const header = Buffer.from(`blob ${fileContent.length}\0`);
     
     // Join fileContent and header
-    const gitObject = Buffer.concat([fileContent, header]);
+    const gitObject = Buffer.concat([header, fileContent]);
     
-    // hash fileContent
+    // hash gitObject
     const hash = createHash('sha1')
-      .update(fileContent) // Input the data that needs hashing
+      .update(gitObject) // Input the data that needs hashing
       .digest('hex') // Calculates digest and outs 'hex' format
     
       // Compress content
