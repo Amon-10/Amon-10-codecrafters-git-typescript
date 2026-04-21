@@ -43,29 +43,22 @@ switch (command) {
   case "hash-object":
     // Read file content
     const fileContent = fs.readFileSync(args[2]); // buffer
-    // convert buffer to bytes/array buffer
-    const buf = Buffer.from(fileContent);
-    const fileContentBuffer = [...buf];
-    
-    // Get size of content
-    const contentSize = Buffer.byteLength(fileContent);
     
     // Create header
-    const header = `blob ${contentSize}\0`; // create header, prepend \0
-    const headerBuffer = Array.from(header, char => char.charCodeAt(0)); // Convert header into bytes
+    // Prepend \0
+    const header = Buffer.from(`blob ${fileContent.length}\0`);
     
-    // Join header and content
-    // Compress content
-    // Decompress content for hashing later
-    const gitObjectDataBuffer = [...headerBuffer, ...fileContentBuffer]; //join header and fileContent
-    const compressedContent = zlib.deflateSync(Buffer.from(gitObjectDataBuffer)); // Convert gitObjectDataBuffer back to buffer and compress
-    const decompressedContent = zlib.inflateSync(compressedContent);
-
-    // Create hash for decompressed content
+    // Join fileContent and header
+    const gitObject = Buffer.concat([fileContent, header]);
+    
+    // hash fileContent
     const hash = createHash('sha1')
-      .update(decompressedContent) // input data to be hashed
-      .digest('hex'); // calculates digest and outs in 'hex' format
+      .update(fileContent) // Input the data that needs hashing
+      .digest('hex') // Calculates digest and outs 'hex' format
     
+      // Compress content
+    const compressedContent = zlib.deflateSync(gitObject);
+
     // Write hashed content to .git/objects
     // Create paths to input compressed content later
     const hashedDirectoryName = hash.slice(0,2);
