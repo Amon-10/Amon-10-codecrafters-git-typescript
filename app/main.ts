@@ -34,6 +34,7 @@ switch (command) {
       // ignore header(blob <size>\0)
       const realContent = decompressContent.toString().split("\0")[1];
       process.stdout.write(realContent);
+      //console.log(decompressContent);
     } catch (err) {
       console.error("Error reading and decompressing blob");
     }
@@ -73,6 +74,45 @@ switch (command) {
   
     // Log hash
     console.log(hash);
+
+    break;
+  
+  case "ls-tree":
+    // Copy directory name and file name from the sha in the command for reading tree object
+    const treeDirectory = args[1].slice(0,2);
+    const treeFileName = args[1].slice(2);
+    
+    // Read tree object
+    // Decompress tree object
+    const compressedtreeObject = fs.readFileSync(`.git/objects/${treeDirectory}/${treeFileName}`);
+    const decompressedTreeObject = zlib.inflateSync(compressedtreeObject);
+    const treeObject = decompressedTreeObject.slice(8) // buffer, no header, just content
+    
+    // <mode> <name>\0<20_byte_sha>
+    // 040000 <dir1>\0<e90864e4ade8aca554f0aa5a3c7398f72a16c2b3>
+    
+    //for(let i = 0; i < spaceSplit.length; i++){
+    let byte_shaEndIndex = 0;
+    
+    while( byte_shaEndIndex < treeObject.length) {
+      // Find mode
+      let spaceIndex = treeObject.indexOf(" ", byte_shaEndIndex); // the index of space
+      let mode = treeObject.slice(byte_shaEndIndex, spaceIndex); // mode: from byte_shaEndIndex to space(' ')
+    
+      // Find Object file or directory name
+      let nullIndex = treeObject.indexOf("\0", spaceIndex); // Find index of null
+      let objectFileName = treeObject.slice(spaceIndex + 1, nullIndex); // Name: from space + 1 to \0
+    
+      // Find file or directory sha
+      let sha_start = nullIndex + 1;
+      byte_shaEndIndex = nullIndex + 21; 
+      let byte_sha = treeObject.slice(sha_start, byte_shaEndIndex);
+      
+      // convert raw bytes to hex string
+      let hexString = Buffer.from(byte_sha).toString('hex');
+
+      console.log(`${objectFileName}`);
+    }
 
     break;
 
