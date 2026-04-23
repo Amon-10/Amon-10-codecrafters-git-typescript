@@ -79,14 +79,15 @@ switch (command) {
   
   case "ls-tree":
     // Copy directory name and file name from the sha in the command for reading tree object
-    const treeDirectory = args[1].slice(0,2);
-    const treeFileName = args[1].slice(2);
+    const treeDirectory = args[2].slice(0,2);
+    const treeFileName = args[2].slice(2);
     
     // Read tree object
     // Decompress tree object
     const compressedtreeObject = fs.readFileSync(`.git/objects/${treeDirectory}/${treeFileName}`);
     const decompressedTreeObject = zlib.inflateSync(compressedtreeObject);
-    const treeObject = decompressedTreeObject.slice(8) // buffer, no header, just content
+    const nullByteIndex = decompressedTreeObject.indexOf("\0");
+    const treeObject = decompressedTreeObject.slice(nullByteIndex + 1); // buffer, no header, just content
     
     // <mode> <name>\0<20_byte_sha>
     // 040000 <dir1>\0<e90864e4ade8aca554f0aa5a3c7398f72a16c2b3>
