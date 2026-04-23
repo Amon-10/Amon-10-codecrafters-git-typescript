@@ -92,7 +92,6 @@ switch (command) {
     // <mode> <name>\0<20_byte_sha>
     // 040000 <dir1>\0<e90864e4ade8aca554f0aa5a3c7398f72a16c2b3>
     
-    //for(let i = 0; i < spaceSplit.length; i++){
     let byte_shaEndIndex = 0;
     
     while( byte_shaEndIndex < treeObject.length) {
@@ -109,8 +108,8 @@ switch (command) {
       byte_shaEndIndex = nullIndex + 21; 
       let byte_sha = treeObject.slice(sha_start, byte_shaEndIndex);
       
-      // convert raw bytes to hex string
-      let hexString = Buffer.from(byte_sha).toString('hex');
+      // convert sha raw bytes to hex string
+      let hexString = Buffer.from(byte_sha).toString('hex'); // not required when codecafters submit
 
       console.log(`${objectFileName}`);
     }
