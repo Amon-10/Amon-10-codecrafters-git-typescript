@@ -111,12 +111,71 @@ switch (command) {
       // convert sha raw bytes to hex string
       let hexString = Buffer.from(byte_sha).toString('hex'); // not required when codecafters submit
 
-      //console.log(`${mode} ${hexString} ${objectFileName}`);
-      console.log(`${objectFileName}`);
+      console.log(`${mode} ${hexString} ${objectFileName}`);
+      //console.log(`${objectFileName}`);
     }
+
+    break;
+  
+  case "write-tree":
+    // Iterate working directory
+    const entries = function(dirPath) {
+      const items = fs
+        .readdirSync(dirPath)
+        .filter((name) => name !== ".git")
+        .sort();
+      
+      let mode;
+      
+      return items.map((item) => {
+        const fullPath = `${dirPath}/${item}`;
+        const stat = fs.statSync(`${fullPath}`); // Find stat for each item in working directory
+
+        // If item is directory then recursively traverse path until file is found
+        if(stat.isDirectory() && item != ".git"){
+          mode = "40000";
+          return entries(fullPath); // fullPath becomes dirPath at the top and then iterates items inside it
+        }
+        // If item is file return blob and sha as object
+        else{
+          mode = "100644";
+          return fileBlob(fullPath);
+        }
+      })
+    };
 
     break;
 
   default:
     throw new Error(`Unknown command ${command}`);
+}
+
+function treeBlob(entries){
+  const buff: Buffer[] = [];
+  
+  entries.forEach((entry) => {
+    let hash = entry.hash;
+    
+    const hashBytes = Buffer.from(hash, "hex");
+    const e = Buffer.concat([Buffer.from(`${entry.mode} ${entry.name}\0`), hashBytes]);
+    buff.push(e);
+  })
+  const treeContent = Buffer.concat(buff);
+  return treeContent;
+}
+
+const fileBlob = (filePath) => {
+  const file = fs.readFileSync(`${filePath}`);          // Read file content
+  const header = Buffer.from(`blob ${file.length}\0`);    // Create header
+  const gitObject = Buffer.concat([header, file]);        // Join fileContent and header
+  
+  // hash gitObject
+  const hash = createHash('sha1')
+    .update(gitObject)                                   // Input the data that needs hashing
+    .digest('hex')                                       // Calculates digest and outs 'hex' format
+  
+    // Compress content
+  const blob = zlib.deflateSync(gitObject);
+
+  return {mode: "100644", name: item, hash, blob};
 }
