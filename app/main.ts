@@ -141,8 +141,8 @@ switch (command) {
       // convert sha raw bytes to hex string
       let hexString = Buffer.from(byte_sha).toString('hex'); // not required when codecafters submit
 
-      console.log(`${mode} ${hexString} ${objectFileName}`);
-      //console.log(`${objectFileName}`);
+      //console.log(`${mode} ${hexString} ${objectFileName}`);
+      console.log(`${objectFileName}`);
     }
 
     break;
