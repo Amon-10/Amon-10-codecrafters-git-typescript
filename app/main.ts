@@ -40,7 +40,9 @@ function writeToGitObjects(gitObject: Buffer) {
   // Create directories and files
   // input compressed content
   fs.mkdirSync(`${dirPath}`, { recursive: true });
-  fs.writeFileSync(filePath, compressedContent);
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, compressedContent);
+  }
 
   return objectHash;
 }
@@ -187,6 +189,20 @@ switch (command) {
 
     console.log(writeTree('.'));
     break;
+
+    // format = commit-tree <tree_sha> -p <commit_sha> -m <message>
+    case "commit-tree":
+      const tree_sha = args[1];
+      const parent_commit_sha = args[3];
+      const message = args[5];
+      const commitContentString = Buffer.from(`tree ${tree_sha}\nparent ${parent_commit_sha}\nauthor Jane <JaneDoe@email.com> 1234567890 +0000\ncommitter Jane <JaneDoe@email.com> 1234567890 +0000\n\n${message}\n`);
+      const commitContentStringLength = commitContentString.length;
+      const commitContentHeader = Buffer.from(`commit ${commitContentStringLength}\0`);
+      const commitContent = Buffer.concat([commitContentHeader, commitContentString]);
+
+      console.log(writeToGitObjects(commitContent));
+
+      break;
 
   default:
     throw new Error(`Unknown command ${command}`);
