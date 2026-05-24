@@ -1,59 +1,116 @@
-[![progress-banner](https://backend.codecrafters.io/progress/git/d6bfbd2b-4e6e-4490-8b63-b0bfa50c9106)](https://app.codecrafters.io/users/Amon-10?r=2qF)
+# Git Internals Implementation — TypeScript
 
-This is a starting point for TypeScript solutions to the
-["Build Your Own Git" Challenge](https://codecrafters.io/challenges/git).
+A from-scratch implementation of core Git internals built in TypeScript. No Git libraries used — just raw file I/O, zlib compression, SHA-1 hashing, and binary buffer manipulation.
 
-In this challenge, you'll build a small Git implementation that's capable of
-initializing a repository, creating commits and cloning a public repository.
-Along the way we'll learn about the `.git` directory, Git objects (blobs,
-commits, trees etc.), Git's transfer protocols and more.
+Built as part of the [CodeCrafters "Build Your Own Git" challenge](https://codecrafters.io/challenges/git).
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+---
 
-# Passing the first stage
+## What's Implemented
 
-The entry point for your Git implementation is in `app/main.ts`. Study and
-uncomment the relevant code, and push your changes to pass the first stage:
-
-```sh
-git commit -am "pass 1st stage" # any msg
-git push origin master
+### `init`
+Initializes a `.git` directory with the standard structure:
+```
+.git/
+  objects/
+  refs/
+  HEAD
 ```
 
-That's all!
-
-# Stage 2 & beyond
-
-Note: This section is for stages 2 and beyond.
-
-1. Ensure you have `bun (1.3)` installed locally
-1. Run `./your_program.sh` to run your Git implementation, which is implemented
-   in `app/main.ts`.
-1. Commit your changes and run `git push origin master` to submit your solution
-   to CodeCrafters. Test output will be streamed to your terminal.
-
-# Testing locally
-
-The `your_program.sh` script is expected to operate on the `.git` folder inside
-the current working directory. If you're running this inside the root of this
-repository, you might end up accidentally damaging your repository's `.git`
-folder.
-
-We suggest executing `your_program.sh` in a different folder when testing
-locally. For example:
-
+### `cat-file`
+Reads, decompresses, and prints a Git object from `.git/objects`.
 ```sh
-mkdir -p /tmp/testing && cd /tmp/testing
-/path/to/your/repo/your_program.sh init
+mygit cat-file -p <sha>
 ```
+Handles zlib decompression and strips the object header (`blob <size>\0`) before printing content.
 
-To make this easier to type out, you could add a
-[shell alias](https://shapeshed.com/unix-alias/):
+### `hash-object`
+Creates a blob object from a file, hashes it, and writes it to `.git/objects`.
+```sh
+mygit hash-object -w <file>
+```
+- Constructs the blob format: `blob <size>\0<content>`
+- SHA-1 hashes the result
+- Compresses with zlib and writes to `.git/objects/xx/yyyy...`
+
+### `ls-tree`
+Parses and prints the entries of a Git tree object.
+```sh
+mygit ls-tree --name-only <tree_sha>
+```
+Tree objects are stored in a binary format — each entry is `<mode> <name>\0<20_raw_bytes>`. This implementation manually parses the binary buffer without any helpers.
+
+### `write-tree`
+Recursively writes the current working directory as a tree object to `.git/objects`.
+```sh
+mygit write-tree
+```
+- Recursively traverses directories, writing subtrees bottom-up
+- Creates blob objects for files and tree objects for directories
+- Sorts entries correctly (directories sorted with trailing `/`)
+- Outputs the root tree SHA
+
+### `commit-tree`
+Creates a commit object from a tree SHA, parent commit SHA, and message.
+```sh
+mygit commit-tree <tree_sha> -p <parent_sha> -m <message>
+```
+Constructs the full commit object format including tree, parent, author, committer, and message fields, then writes it to `.git/objects`.
+
+---
+
+## Key Concepts
+
+### Git Object Storage
+All Git objects are stored in `.git/objects/xx/yyyy...` where `xx` is the first 2 hex characters of the SHA-1 hash and `yyyy...` is the remaining 38. Every object is zlib-compressed before writing.
+
+### Object Formats
+| Type | Format |
+|------|--------|
+| Blob | `blob <size>\0<content>` |
+| Tree | `tree <size>\0<mode> <name>\0<20_byte_sha>...` |
+| Commit | `commit <size>\0tree <sha>\nparent <sha>\nauthor ...\n\n<message>\n` |
+
+### Binary vs Text
+Tree objects store SHA hashes as raw 20 bytes (binary), not as 40-character hex strings. This means you can't just concatenate strings — you have to work with `Buffer` and convert with `Buffer.from(hash, 'hex')`.
+
+Commit objects store SHAs as plain 40-character hex strings (text). No binary conversion needed.
+
+---
+
+## Tech Stack
+
+- **Runtime:** Bun 1.3
+- **Language:** TypeScript
+- **Libraries:** Node.js built-ins only (`fs`, `zlib`, `crypto`) — no Git libraries
+
+---
+
+## Running Locally
+
+Requires [Bun](https://bun.sh) 1.3+.
+
+**Important:** Run in a separate directory to avoid corrupting this repo's own `.git` folder.
 
 ```sh
-alias mygit=/path/to/your/repo/your_program.sh
+# Set up an alias
+alias mygit=/path/to/this/repo/your_program.sh
 
+# Test in a temp directory
 mkdir -p /tmp/testing && cd /tmp/testing
 mygit init
+echo "hello world" > test.txt
+mygit hash-object -w test.txt
+mygit write-tree
+mygit commit-tree <tree_sha> -p <parent_sha> -m "Initial commit"
+```
+
+---
+
+## Project Structure
+
+```
+app/
+  main.ts       # All command implementations
+your_program.sh # Entry point script
 ```
